@@ -6,21 +6,11 @@ import FreeTrialForm from './components/freeTrial.jsx'
 import DiscussionForums from './components/discussion.jsx'
 import MentorshipProgram from './components/mentorship.jsx'
 import AssessmentPlatform from './components/assesment.jsx'
+import QuestionSolutions from './components/solutions.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App/>
-    <FreeTrialForm>
-    </FreeTrialForm>
-
-    <DiscussionForums> 
-    </DiscussionForums>    
-
-    <MentorshipProgram>
-    </MentorshipProgram>
-
-    <AssessmentPlatform>
-    </AssessmentPlatform>
     
   </StrictMode>,
 )

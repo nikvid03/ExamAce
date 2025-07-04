@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { BookOpen, Target, Users, Trophy, Clock, ChevronRight, Play, Star, CheckCircle, ArrowRight, Menu, X, User, Mail, Phone, Calendar, GraduationCap, MapPin } from 'lucide-react';
+import { BookOpen, Target, Users, Trophy, Clock, ChevronRight, Play, Star, CheckCircle, ArrowRight, Menu, X, User, Mail, Phone, Calendar, GraduationCap, MapPin, FileText, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
-const FreeTrialForm = () => {
+const FreeTrialForm = ({ onClose }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -23,6 +25,8 @@ const FreeTrialForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -60,6 +64,10 @@ const FreeTrialForm = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
+  const handleTakeAssessment = () => {
+    navigate('/assessment');
+  };
+
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-4">
@@ -72,9 +80,9 @@ const FreeTrialForm = () => {
             <p className="text-xl text-gray-300 mb-8">
               Your free trial has been activated successfully. Check your email for login credentials and next steps.
             </p>
-            <div className="space-y-4">
-              <div className="bg-blue-500/20 rounded-xl p-4 border border-blue-500/30">
-                <h3 className="text-lg font-semibold text-white mb-2">What's Next?</h3>
+            <div className="space-y-6">
+              <div className="bg-blue-500/20 rounded-xl p-6 border border-blue-500/30">
+                <h3 className="text-lg font-semibold text-white mb-3">What's Next?</h3>
                 <ul className="text-gray-300 text-left space-y-2">
                   <li>• Check your email for login credentials</li>
                   <li>• Complete your profile setup</li>
@@ -82,9 +90,34 @@ const FreeTrialForm = () => {
                   <li>• Access 7 days of premium content</li>
                 </ul>
               </div>
-              <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-2xl">
-                Go to Dashboard
-              </button>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 shadow-2xl flex items-center justify-center"
+                  onClick={handleTakeAssessment}
+                >
+                  <FileText className="w-5 h-5 mr-2" />
+                  Take Assessment
+                </button>
+                
+                <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-2xl flex items-center justify-center">
+                  <Target className="w-5 h-5 mr-2" />
+                  Go to Dashboard
+                </button>
+                <button
+                  className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 flex items-center space-x-2"
+                  onClick={() => navigate('/discussion')}
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  <span>Discussion</span>
+                </button>
+              </div>
+              
+              <div className="bg-green-500/20 rounded-xl p-4 border border-green-500/30 mt-6">
+                <p className="text-green-300 text-sm">
+                  💡 <strong>Tip:</strong> Start with the assessment to get personalized study recommendations based on your current knowledge level.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -93,7 +126,16 @@ const FreeTrialForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative">
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 z-50 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 focus:outline-none"
+          aria-label="Close"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -484,4 +526,4 @@ const FreeTrialForm = () => {
   );
 };
 
-export default FreeTrialForm; 
+export default FreeTrialForm;

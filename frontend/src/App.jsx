@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Target, Users, Trophy, Clock, ChevronRight, Play, Star, CheckCircle, ArrowRight, Menu, X, Brain, Zap, BarChart3, Video, MessageCircle, Calendar, Award, TrendingUp, Eye, Lightbulb, Smartphone, Headphones, Globe, Shield, Cpu, Gamepad2 } from 'lucide-react';
+import FreeTrialForm from './components/freeTrial.jsx';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import MentorshipProgram from './components/mentorship.jsx';
+import AssessmentPlatform from './components/assesment.jsx';
+import Solutions from './components/solutions.jsx';
+import Discussion from './components/discussion.jsx';
+import AiPowered from './components/aiPowered.jsx';
+import ArVR from './components/arVR.jsx';
+import AdvancedANL from './components/advancedANL.jsx';
+import Live from './components/live.jsx';
+import Game from './components/game.jsx';
+import Smart from './components/smart.jsx';
+import Neural from './components/neural.jsx';
 
 const JEENEETApp = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -7,6 +20,9 @@ const JEENEETApp = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentAIFeature, setCurrentAIFeature] = useState(0);
   const [isAnalyticsVisible, setIsAnalyticsVisible] = useState(false);
+  const [showFreeTrial, setShowFreeTrial] = useState(false);
+  const [showMentorship, setShowMentorship] = useState(false);
+  const navigate = useNavigate();
 
   const features = [
     {
@@ -162,11 +178,31 @@ const JEENEETApp = () => {
               <a href="#courses" className="text-gray-300 hover:text-white transition-colors">Courses</a>
               <a href="#analytics" className="text-gray-300 hover:text-white transition-colors">Analytics</a>
               <a href="#testimonials" className="text-gray-300 hover:text-white transition-colors">Success Stories</a>
-              <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105">
-                Start Free Trial
-              </button>
-            </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-teal-700 transition-all transform hover:scale-105 flex items-center space-x-2"
+                  onClick={() => navigate('/mentorship')}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Mentorship</span>
+                </button>
+                <button
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105"
+                  onClick={() => navigate('/free-trial')}
+                >
+                  Start Free Trial
+                </button>
 
+                
+<button
+  className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-2 rounded-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 flex items-center space-x-2"
+  onClick={() => navigate('/discussion')}
+>
+  <MessageCircle className="w-4 h-4" />
+  <span>Discussion</span>
+</button>
+              </div>
+            </div>
             {/* Mobile Menu Button */}
             <button 
               className="md:hidden text-white"
@@ -184,7 +220,10 @@ const JEENEETApp = () => {
                 <a href="#courses" className="block text-gray-300 hover:text-white transition-colors">Courses</a>
                 <a href="#analytics" className="block text-gray-300 hover:text-white transition-colors">Analytics</a>
                 <a href="#testimonials" className="block text-gray-300 hover:text-white transition-colors">Success Stories</a>
-                <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all">
+                <button
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+                  onClick={() => setShowFreeTrial(true)}
+                >
                   Start Free Trial
                 </button>
               </div>
@@ -192,6 +231,20 @@ const JEENEETApp = () => {
           )}
         </div>
       </nav>
+
+      {/* Free Trial Modal Overlay */}
+      {showFreeTrial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <FreeTrialForm onClose={() => setShowFreeTrial(false)} />
+        </div>
+      )}
+
+      {/* Mentorship Modal Overlay */}
+      {showMentorship && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <MentorshipProgram onClose={() => setShowMentorship(false)} />
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
@@ -214,7 +267,9 @@ const JEENEETApp = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <button className="group bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-cyan-600 hover:via-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-2xl">
+              <button className="group bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-cyan-600 hover:via-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-2xl"
+                onClick={() => navigate('/ai-powered')}
+              >
                 Experience AI Learning
                 <Zap className="inline-block ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
               </button>
@@ -527,7 +582,18 @@ const JEENEETApp = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="text-center group relative">
+              <div
+                key={index}
+                className="text-center group relative cursor-pointer"
+                onClick={() => {
+                  if (feature.title === 'AI-Powered Learning') navigate('/ai-powered');
+                  else if (feature.title === 'AR/VR Study Mode') navigate('/ar-vr');
+                  else if (feature.title === 'Advanced Analytics') navigate('/advanced-analytics');
+                  else if (feature.title === 'Live Interactive Classes') navigate('/live');
+                  else if (feature.title === 'Gamified Learning') navigate('/game');
+                  else if (feature.title === 'Smart Study Companion') navigate('/smart');
+                }}
+              >
                 {feature.badge && (
                   <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold ${
                     feature.badge === 'NEW' ? 'bg-green-500' :
@@ -854,4 +920,24 @@ const JEENEETApp = () => {
   );
 };
 
-export default JEENEETApp;
+const AppRoutes = () => (
+  <Router>
+    <Routes>
+      <Route path="/" element={<JEENEETApp />} />
+      <Route path="/mentorship" element={<MentorshipProgram />} />
+      <Route path="/free-trial" element={<FreeTrialForm onClose={() => {}} />} />
+      <Route path="/assessment" element={<AssessmentPlatform />} />
+      <Route path="/solutions" element={<Solutions />} />
+      <Route path="/discussion" element={<Discussion />} />
+      <Route path="/ai-powered" element={<AiPowered />} />
+      <Route path="/ar-vr" element={<ArVR />} />
+      <Route path="/advanced-analytics" element={<AdvancedANL />} />
+      <Route path="/live" element={<Live />} />
+      <Route path="/game" element={<Game />} />
+      <Route path="/smart" element={<Smart />} />
+      <Route path="/neural" element={<Neural />} />
+    </Routes>
+  </Router>
+);
+
+export default AppRoutes;

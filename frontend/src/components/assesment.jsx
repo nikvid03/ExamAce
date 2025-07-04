@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertCircle, CheckCircle, XCircle, BarChart3, Target, Trophy, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import Solutions from './solutions.jsx';
 
 const AssessmentPlatform = () => {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'test', 'results'
@@ -8,6 +10,7 @@ const AssessmentPlatform = () => {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [testStarted, setTestStarted] = useState(false);
+  const navigate = useNavigate();
 
   const availableTests = [
     {
@@ -262,6 +265,7 @@ const AssessmentPlatform = () => {
   const handleSubmitTest = () => {
     setTestStarted(false);
     setCurrentView('results');
+    navigate('/solutions');
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -649,6 +653,7 @@ const AssessmentPlatform = () => {
           </div>
         </div>
       </div>
+      <Solutions />
     </div>
   );
 };
