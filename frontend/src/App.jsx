@@ -592,6 +592,7 @@ const JEENEETApp = () => {
                   else if (feature.title === 'Live Interactive Classes') navigate('/live');
                   else if (feature.title === 'Gamified Learning') navigate('/game');
                   else if (feature.title === 'Smart Study Companion') navigate('/smart');
+                  else if (feature.title === 'Neural Network Testing') navigate('/neural');
                 }}
               >
                 {feature.badge && (
