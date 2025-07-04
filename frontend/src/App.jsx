@@ -7,7 +7,7 @@ import AssessmentPlatform from './components/assesment.jsx';
 import Solutions from './components/solutions.jsx';
 import Discussion from './components/discussion.jsx';
 import AiPowered from './components/aiPowered.jsx';
-import ArVR from './components/arVR.jsx';
+import ArVR from './components/ArVr.jsx';
 import AdvancedANL from './components/advancedANL.jsx';
 import Live from './components/live.jsx';
 import Game from './components/game.jsx';
