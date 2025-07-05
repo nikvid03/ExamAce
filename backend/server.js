@@ -1,462 +1,474 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const connectDB = require('./config/database');
 require('dotenv').config();
 
+// Import routes
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+
+// Import models
+const Question = require('./models/Question');
+const Test = require('./models/Test');
+const TestResult = require('./models/TestResult');
+const Mentor = require('./models/Mentor');
+const MentorshipSession = require('./models/MentorshipSession');
+const Discussion = require('./models/Discussion');
+const StudyMaterial = require('./models/StudyMaterial');
+
+// Import middleware
+const { authenticateToken } = require('./middleware/auth');
+
+// Import utilities
+const { generatePassword, sendWelcomeEmail } = require('./utils/email');
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
+
+// Connect to MongoDB
+connectDB();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/examace', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
-  console.log('Connected to MongoDB');
-});
-
-// User Schema
-const userSchema = new mongoose.Schema({
-  // Personal Information
-  firstName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  lastName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true
-  },
-  phone: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  dateOfBirth: {
-    type: Date,
-    required: true
-  },
-  city: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  state: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  
-  // Academic Details
-  targetExam: {
-    type: String,
-    required: true,
-    enum: ['JEE Main', 'JEE Advanced', 'NEET', 'Both JEE & NEET']
-  },
-  currentClass: {
-    type: String,
-    required: true,
-    enum: ['Class 10', 'Class 11', 'Class 12', '12th Pass', 'Dropper']
-  },
-  preferredSubjects: [{
-    type: String,
-    enum: ['Physics', 'Chemistry', 'Mathematics', 'Biology']
-  }],
-  previousScore: {
-    type: String,
-    trim: true
-  },
-  targetScore: {
-    type: String,
-    trim: true
-  },
-  
-  // Study Preferences
-  studyHours: {
-    type: String,
-    required: true,
-    enum: ['2-4 hours', '4-6 hours', '6-8 hours', '8+ hours']
-  },
-  
-  // Trial Information
-  trialStartDate: {
-    type: Date,
-    default: Date.now
-  },
-  trialEndDate: {
-    type: Date,
-    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
-  },
-  isTrialActive: {
-    type: Boolean,
-    default: true
-  },
-  
-  // Preferences
-  agreeToTerms: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-  receiveUpdates: {
-    type: Boolean,
-    default: false
-  },
-  
-  // Generated credentials
-  password: {
-    type: String,
-    required: true
-  },
-  isEmailVerified: {
-    type: Boolean,
-    default: false
-  },
-  emailVerificationToken: String,
-  
-  // Timestamps
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Pre-save middleware to update the updatedAt field
-userSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
-const User = mongoose.model('User', userSchema);
-
-// Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // or your email service
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
-// Utility function to generate random password
-const generatePassword = () => {
-  const length = 8;
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return password;
-};
-
-// Send welcome email with credentials
-const sendWelcomeEmail = async (user, plainPassword) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: user.email,
-    subject: 'Welcome to ExamAce - Your Free Trial is Active!',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #4F46E5;">Welcome to ExamAce, ${user.firstName}!</h2>
-        
-        <p>Your free trial has been successfully activated. Here are your login credentials:</p>
-        
-        <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px 0;">Login Credentials:</h3>
-          <p><strong>Email:</strong> ${user.email}</p>
-          <p><strong>Password:</strong> ${plainPassword}</p>
-        </div>
-        
-        <div style="background-color: #EFF6FF; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #1E40AF; margin: 0 0 10px 0;">Your Free Trial Includes:</h3>
-          <ul>
-            <li>Access to all video lectures</li>
-            <li>10 practice tests</li>
-            <li>Doubt clearing sessions</li>
-            <li>Performance analytics</li>
-          </ul>
-          <p><strong>Trial Period:</strong> 7 days (until ${user.trialEndDate.toLocaleDateString()})</p>
-        </div>
-        
-        <div style="background-color: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #166534; margin: 0 0 10px 0;">Next Steps:</h3>
-          <ol>
-            <li>Login to your account using the credentials above</li>
-            <li>Complete your profile setup</li>
-            <li>Take your first diagnostic test</li>
-            <li>Start exploring premium content</li>
-          </ol>
-        </div>
-        
-        <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
-          If you have any questions, feel free to reach out to our support team.
-        </p>
-        
-        <p>Best regards,<br>The ExamAce Team</p>
-      </div>
-    `
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('Welcome email sent to:', user.email);
-  } catch (error) {
-    console.error('Error sending welcome email:', error);
-  }
-};
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
+// ==================== API ENDPOINTS ====================
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
-});
-
-// Start free trial
-app.post('/api/free-trial', async (req, res) => {
-  try {
-    const {
-      firstName,
-      lastName,
-      email,
-      phone,
-      dateOfBirth,
-      city,
-      state,
-      targetExam,
-      currentClass,
-      preferredSubjects,
-      previousScore,
-      targetScore,
-      studyHours,
-      agreeToTerms,
-      receiveUpdates
-    } = req.body;
-
-    // Validate required fields
-    if (!firstName || !lastName || !email || !phone || !dateOfBirth || 
-        !city || !state || !targetExam || !currentClass || !studyHours || !agreeToTerms) {
-      return res.status(400).json({
-        success: false,
-        message: 'All required fields must be filled'
-      });
-    }
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
-    }
-
-    // Generate password and hash it
-    const plainPassword = generatePassword();
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-    // Create new user
-    const newUser = new User({
-      firstName,
-      lastName,
-      email: email.toLowerCase(),
-      phone,
-      dateOfBirth: new Date(dateOfBirth),
-      city,
-      state,
-      targetExam,
-      currentClass,
-      preferredSubjects: preferredSubjects || [],
-      previousScore,
-      targetScore,
-      studyHours,
-      agreeToTerms,
-      receiveUpdates,
-      password: hashedPassword
-    });
-
-    // Save user to database
-    await newUser.save();
-
-    // Send welcome email
-    await sendWelcomeEmail(newUser, plainPassword);
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: newUser._id, 
-        email: newUser.email 
-      },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Free trial started successfully',
-      data: {
-        userId: newUser._id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        trialEndDate: newUser.trialEndDate,
-        token
-      }
-    });
-
-  } catch (error) {
-    console.error('Error creating free trial:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
-  }
-});
-
-// Get user profile
-app.get('/api/user/profile', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'No token provided'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findById(decoded.userId).select('-password');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user
-    });
-
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Get all users (admin endpoint)
-app.get('/api/users', async (req, res) => {
-  try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
-    
-    res.json({
-      success: true,
-      data: users,
-      count: users.length
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Login endpoint
-app.post('/api/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Find user
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: user._id, 
-        email: user.email 
-      },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        userId: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isTrialActive: user.isTrialActive,
-        trialEndDate: user.trialEndDate,
-        token
-      }
-    });
-
-  } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Something went wrong!'
+  res.json({ 
+    status: 'OK', 
+    message: 'ExamAce Backend is running',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Start server
+// Get Questions by Subject
+app.get('/api/questions/:subject', async (req, res) => {
+  try {
+    const { subject } = req.params;
+    const { difficulty, topic, limit = 10 } = req.query;
+
+    let query = { subject };
+    if (difficulty) query.difficulty = difficulty;
+    if (topic) query.topic = topic;
+
+    const questions = await Question.find(query)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    res.json(questions);
+  } catch (error) {
+    console.error('Error fetching questions:', error);
+    res.status(500).json({ error: 'Failed to fetch questions' });
+  }
+});
+
+// Get All Tests
+app.get('/api/tests', async (req, res) => {
+  try {
+    const { subject, type, difficulty } = req.query;
+
+    let query = { isActive: true };
+    if (subject) query.subject = subject;
+    if (type) query.type = type;
+    if (difficulty) query.difficulty = difficulty;
+
+    const tests = await Test.find(query)
+      .populate('questions', 'question options correctAnswer marks')
+      .sort({ createdAt: -1 });
+
+    res.json(tests);
+  } catch (error) {
+    console.error('Error fetching tests:', error);
+    res.status(500).json({ error: 'Failed to fetch tests' });
+  }
+});
+
+// Get Test by ID
+app.get('/api/tests/:id', async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id)
+      .populate('questions', 'question options marks');
+
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json(test);
+  } catch (error) {
+    console.error('Error fetching test:', error);
+    res.status(500).json({ error: 'Failed to fetch test' });
+  }
+});
+
+// Submit Test Result
+app.post('/api/test-results', authenticateToken, async (req, res) => {
+  try {
+    const { testId, score, totalMarks, timeTaken, answers } = req.body;
+
+    const percentage = (score / totalMarks) * 100;
+
+    const testResult = new TestResult({
+      userId: req.user._id,
+      testId,
+      score,
+      totalMarks,
+      percentage,
+      timeTaken,
+      answers
+    });
+
+    await testResult.save();
+
+    // Update user stats
+    const User = require('./models/User');
+    const user = await User.findById(req.user._id);
+    user.testsCompleted += 1;
+    user.averageScore = ((user.averageScore * (user.testsCompleted - 1)) + percentage) / user.testsCompleted;
+    await user.save();
+
+    res.status(201).json(testResult);
+  } catch (error) {
+    console.error('Error submitting test result:', error);
+    res.status(500).json({ error: 'Failed to save test result' });
+  }
+});
+
+// Get User's Test Results
+app.get('/api/test-results', authenticateToken, async (req, res) => {
+  try {
+    const results = await TestResult.find({ userId: req.user._id })
+      .populate('testId', 'title subject type')
+      .sort({ completedAt: -1 });
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching test results:', error);
+    res.status(500).json({ error: 'Failed to fetch test results' });
+  }
+});
+
+// Get All Mentors
+app.get('/api/mentors', async (req, res) => {
+  try {
+    const { exam, subject, search } = req.query;
+
+    let query = { isActive: true };
+    if (exam) query.exams = exam;
+    if (subject) query.subjects = subject;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { specialization: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const mentors = await Mentor.find(query).sort({ rating: -1 });
+    res.json(mentors);
+  } catch (error) {
+    console.error('Error fetching mentors:', error);
+    res.status(500).json({ error: 'Failed to fetch mentors' });
+  }
+});
+
+// Get Mentor by ID
+app.get('/api/mentors/:id', async (req, res) => {
+  try {
+    const mentor = await Mentor.findById(req.params.id);
+    if (!mentor) {
+      return res.status(404).json({ error: 'Mentor not found' });
+    }
+    res.json(mentor);
+  } catch (error) {
+    console.error('Error fetching mentor:', error);
+    res.status(500).json({ error: 'Failed to fetch mentor' });
+  }
+});
+
+// Book Mentorship Session
+app.post('/api/mentorship-sessions', authenticateToken, async (req, res) => {
+  try {
+    const { mentorId, programType, duration, sessions, price } = req.body;
+
+    const mentorshipSession = new MentorshipSession({
+      mentorId,
+      studentId: req.user._id,
+      programType,
+      duration,
+      sessions,
+      price
+    });
+
+    await mentorshipSession.save();
+
+    res.status(201).json(mentorshipSession);
+  } catch (error) {
+    console.error('Error booking mentorship session:', error);
+    res.status(500).json({ error: 'Failed to book mentorship session' });
+  }
+});
+
+// Get User's Mentorship Sessions
+app.get('/api/mentorship-sessions', authenticateToken, async (req, res) => {
+  try {
+    const sessions = await MentorshipSession.find({ studentId: req.user._id })
+      .populate('mentorId', 'name qualification specialization')
+      .sort({ createdAt: -1 });
+
+    res.json(sessions);
+  } catch (error) {
+    console.error('Error fetching mentorship sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch mentorship sessions' });
+  }
+});
+
+// Create Discussion
+app.post('/api/discussions', authenticateToken, async (req, res) => {
+  try {
+    const { title, content, subject, tags } = req.body;
+
+    const discussion = new Discussion({
+      title,
+      content,
+      author: req.user._id,
+      subject,
+      tags
+    });
+
+    await discussion.save();
+
+    const populatedDiscussion = await Discussion.findById(discussion._id)
+      .populate('author', 'firstName lastName');
+
+    res.status(201).json(populatedDiscussion);
+  } catch (error) {
+    console.error('Error creating discussion:', error);
+    res.status(500).json({ error: 'Failed to create discussion' });
+  }
+});
+
+// Get All Discussions
+app.get('/api/discussions', async (req, res) => {
+  try {
+    const { subject, search, sort = 'latest' } = req.query;
+
+    let query = {};
+    if (subject) query.subject = subject;
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    let sortOption = { createdAt: -1 };
+    if (sort === 'popular') sortOption = { 'replies.length': -1 };
+
+    const discussions = await Discussion.find(query)
+      .populate('author', 'firstName lastName')
+      .sort(sortOption);
+
+    res.json(discussions);
+  } catch (error) {
+    console.error('Error fetching discussions:', error);
+    res.status(500).json({ error: 'Failed to fetch discussions' });
+  }
+});
+
+// Get Discussion by ID
+app.get('/api/discussions/:id', async (req, res) => {
+  try {
+    const discussion = await Discussion.findById(req.params.id)
+      .populate('author', 'firstName lastName')
+      .populate('replies.author', 'firstName lastName');
+
+    if (!discussion) {
+      return res.status(404).json({ error: 'Discussion not found' });
+    }
+
+    res.json(discussion);
+  } catch (error) {
+    console.error('Error fetching discussion:', error);
+    res.status(500).json({ error: 'Failed to fetch discussion' });
+  }
+});
+
+// Add Reply to Discussion
+app.post('/api/discussions/:id/replies', authenticateToken, async (req, res) => {
+  try {
+    const { content } = req.body;
+    const discussion = await Discussion.findById(req.params.id);
+
+    if (!discussion) {
+      return res.status(404).json({ error: 'Discussion not found' });
+    }
+
+    discussion.replies.push({
+      author: req.user._id,
+      content
+    });
+
+    await discussion.save();
+
+    const updatedDiscussion = await Discussion.findById(req.params.id)
+      .populate('author', 'firstName lastName')
+      .populate('replies.author', 'firstName lastName');
+
+    res.json(updatedDiscussion);
+  } catch (error) {
+    console.error('Error adding reply:', error);
+    res.status(500).json({ error: 'Failed to add reply' });
+  }
+});
+
+// Get Study Materials
+app.get('/api/study-materials', async (req, res) => {
+  try {
+    const { subject, topic, type, difficulty } = req.query;
+
+    let query = {};
+    if (subject) query.subject = subject;
+    if (topic) query.topic = topic;
+    if (type) query.type = type;
+    if (difficulty) query.difficulty = difficulty;
+
+    const materials = await StudyMaterial.find(query)
+      .sort({ createdAt: -1 });
+
+    res.json(materials);
+  } catch (error) {
+    console.error('Error fetching study materials:', error);
+    res.status(500).json({ error: 'Failed to fetch study materials' });
+  }
+});
+
+// ==================== SEED DATA ENDPOINTS ====================
+
+// Add sample questions
+app.post('/api/seed/questions', async (req, res) => {
+  try {
+    const sampleQuestions = [
+      {
+        question: "A particle moves in a straight line with constant acceleration. If it covers 100m in the first 10 seconds and 150m in the next 10 seconds, what is its acceleration?",
+        options: ["2.5 m/s²", "5 m/s²", "7.5 m/s²", "10 m/s²"],
+        correctAnswer: 0,
+        explanation: "Using the equation s = ut + ½at², we can solve for acceleration.",
+        subject: "Physics",
+        topic: "Kinematics",
+        difficulty: "Medium",
+        marks: 4
+      },
+      {
+        question: "Which of the following compounds will undergo nucleophilic substitution reaction most readily?",
+        options: ["CH₃CH₂Cl", "CH₃CH₂Br", "CH₃CH₂I", "CH₃CH₂F"],
+        correctAnswer: 2,
+        explanation: "Iodide ion is the best leaving group among halides.",
+        subject: "Chemistry",
+        topic: "Organic Chemistry",
+        difficulty: "Medium",
+        marks: 4
+      },
+      {
+        question: "The derivative of ln(sin x) with respect to x is:",
+        options: ["cos x", "cot x", "tan x", "sec x"],
+        correctAnswer: 1,
+        explanation: "Using chain rule: d/dx[ln(sin x)] = (1/sin x) × cos x = cot x",
+        subject: "Mathematics",
+        topic: "Calculus",
+        difficulty: "Medium",
+        marks: 4
+      },
+      {
+        question: "The powerhouse of the cell is:",
+        options: ["Nucleus", "Mitochondria", "Ribosome", "Endoplasmic reticulum"],
+        correctAnswer: 1,
+        explanation: "Mitochondria produce ATP through cellular respiration, providing energy for cellular processes",
+        subject: "Biology",
+        topic: "Cell Biology",
+        difficulty: "Easy",
+        marks: 4
+      }
+    ];
+
+    await Question.insertMany(sampleQuestions);
+    res.json({ message: 'Sample questions added successfully' });
+  } catch (error) {
+    console.error('Error seeding questions:', error);
+    res.status(500).json({ error: 'Failed to add sample questions' });
+  }
+});
+
+// Add sample mentors
+app.post('/api/seed/mentors', async (req, res) => {
+  try {
+    const sampleMentors = [
+      {
+        name: "Dr. Rajesh Kumar",
+        qualification: "IIT Delhi, Ph.D. Physics",
+        experience: "12 years",
+        subjects: ["Physics", "Mathematics"],
+        exams: ["JEE"],
+        rating: 4.9,
+        reviews: 847,
+        students: 2500,
+        successRate: 94,
+        specialization: "Mechanics & Thermodynamics",
+        achievements: ["AIR 12 JEE Advanced", "Published Researcher", "IIT Faculty"],
+        hourlyRate: 2000,
+        languages: ["Hindi", "English"],
+        availability: "Mon-Fri 6-10 PM",
+        bio: "Experienced IIT faculty with expertise in advanced physics concepts."
+      },
+      {
+        name: "Dr. Priya Sharma",
+        qualification: "AIIMS Delhi, MBBS, MD",
+        experience: "8 years",
+        subjects: ["Biology", "Chemistry"],
+        exams: ["NEET"],
+        rating: 4.8,
+        reviews: 623,
+        students: 1800,
+        successRate: 96,
+        specialization: "Human Physiology & Organic Chemistry",
+        achievements: ["AIIMS Topper", "Medical Researcher", "NEET Expert"],
+        hourlyRate: 1800,
+        languages: ["Hindi", "English", "Tamil"],
+        availability: "Tue-Sat 5-9 PM",
+        bio: "AIIMS graduate with deep understanding of medical entrance patterns."
+      }
+    ];
+
+    await Mentor.insertMany(sampleMentors);
+    res.json({ message: 'Sample mentors added successfully' });
+  } catch (error) {
+    console.error('Error seeding mentors:', error);
+    res.status(500).json({ error: 'Failed to add sample mentors' });
+  }
+});
+
+// ==================== ERROR HANDLING ====================
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// ==================== START SERVER ====================
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📚 ExamAce Backend API is ready!`);
+  console.log(` Health check: http://localhost:${PORT}/api/health`);
+  console.log(` API Documentation: http://localhost:${PORT}/api`);
 });

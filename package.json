@@ -1,5 +1,32 @@
 {
-  "dependencies": {
-    "react-router-dom": "^7.6.3"
+  "name": "examace-platform",
+  "version": "1.0.0",
+  "description": "Complete IIT JEE & NEET preparation platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend": "cd backend && npm start",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run build && npm run preview",
+    "frontend:dev": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "setup": "cd backend && npm run setup",
+    "build": "cd frontend && npm run build",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "jee",
+    "neet",
+    "education",
+    "examace",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
