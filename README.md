@@ -1,5 +1,7 @@
 # ExamAce Platform 🚀
 
+Deployed  link : https://exam-ace-cfve-git-main-nikhil-vidyarthis-projects.vercel.app/
+
 A comprehensive IIT JEE & NEET preparation platform built with React, Node.js, and MongoDB. This platform provides students with AI-powered learning tools, practice tests, mentorship opportunities, and interactive study materials.
 
 ## ✨ Features
